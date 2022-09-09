@@ -1,10 +1,11 @@
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef PRINT_F
+#define PRINT_F
 
 #include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 
 /* Flag Modifier Macros */
 #define PLUS 1
@@ -104,13 +105,23 @@ unsigned int print_string_width(buffer_t *output,
 unsigned int print_neg_width(buffer_t *output, unsigned int printed,
 		unsigned char flags, int wid);
 
-/* Helper Functions */
-buffer_t *init_buffer(void);
-void free_buffer(buffer_t *output);
-unsigned int _memcpy(buffer_t *output, const char *src, unsigned int n);
-unsigned int convert_sbase(buffer_t *output, long int num, char *base,
-		unsigned char flags, int wid, int prec);
-unsigned int convert_ubase(buffer_t *output, unsigned long int num, char *base,
-		unsigned char flags, int wid, int prec);
+/*putchar function*/
+int _putchar(int c);
+int _puts(char *str);
 
-#endif /* MAIN_H */
+/* Helper Functions */
+int get_flags(char *s, param_func *func);
+int get_digits(int i);
+int is_digit(int c);
+int print_right_shift(char *str, param_func *func);
+int print_num(char *str, param_func *func);
+int get_mods(char *str, param_func *func);
+char *convert_num(long int num, int base, int flags, param_func *func);
+char *get_precision(char *str, param_func *func, va_list list);
+void init_params(param_func *func, va_list list);
+char *get_width(char *str, param_func *func, va_list list);
+int print_range(char *start, char *stop, char *except);
+int print_func(char *s, va_list list, param_func *func);
+int print_left_shift(char *str, param_func *func);
+int _strlen(char *s);
+#endif
