@@ -1,87 +1,49 @@
-##include "main.h"
-
-void cleanup(va_list args, buffer_t *output);
-int run_printf(const char *format, va_list args, buffer_t *output);
-int _printf(const char *format, ...);
+#include "main.h"
 
 /**
- * cleanup - Peforms cleanup operations for _printf.
- * @args: A va_list of arguments provided to _printf.
- * @output: A buffer_t struct.
- */
-void cleanup(va_list args, buffer_t *output)
-{
-	va_end(args);
-	write(1, output->start, output->len);
-	free_buffer(output);
-}
-
-/**
- * run_printf - Reads through the format string for _printf.
- * @format: Character string to print - may contain directives.
- * @output: A buffer_t struct containing a buffer.
- * @args: A va_list of arguments.
- *
- * Return: The number of characters stored to output.
- */
-int run_printf(const char *format, va_list args, buffer_t *output)
-{
-	int i, wid, prec, ret = 0;
-	char tmp;
-	unsigned char flags, len;
-	unsigned int (*f)(va_list, buffer_t *,
-			unsigned char, int, int, unsigned char);
-
-	for (i = 0; *(format + i); i++)
-	{
-		len = 0;
-		if (*(format + i) == '%')
-		{
-			tmp = 0;
-			flags = handle_flags(format + i + 1, &tmp);
-			wid = handle_width(args, format + i + tmp + 1, &tmp);
-			prec = handle_precision(args, format + i + tmp + 1,
-					&tmp);
-			len = handle_length(format + i + tmp + 1, &tmp);
-
-			f = handle_specifiers(format + i + tmp + 1);
-			if (f != NULL)
-			{
-				i += tmp + 1;
-				ret += f(args, output, flags, wid, prec, len);
-				continue;
-			}
-			else if (*(format + i + tmp + 1) == '\0')
-			{
-				ret = -1;
-				break;
-			}
-		}
-		ret += _memcpy(output, (format + i), 1);
-		i += (len != 0) ? 1 : 0;
-	}
-	cleanup(args, output);
-	return (ret);
-}
-
-/**
- * _printf - Outputs a formatted string.
- * @format: Character string to print - may contain directives.
- *
- * Return: The number of characters printed.
+ *_printf - Print a formatted string
+ *@format: format string
+ *Return: number of characters printed
  */
 int _printf(const char *format, ...)
 {
-	buffer_t *output;
-	va_list args;
-	int ret;
+	int count = 0;
+	va_list list;
+	char *pointer, *start;
+	param_func flags = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-	if (format == NULL)
+	va_start(list, format);
+
+	if (!format || (format[0] == '%' && !format[1]))
 		return (-1);
-	output = init_buffer();
-	if (output == NULL)
-return (-1);
-va_start(args, format);
-ret = run_printf(format, args, output);
-return (ret);
+	if (format[0] == '%' && format[1] == ' ' && !format[2])
+		return (-1);
+	for (pointer = (char *)format; *pointer; pointer++)
+	{
+		init_params(&flags, list);
+		if (*pointer != '%')
+		{
+			count += _putchar(*pointer);
+			continue;
+		}
+		start = pointer;
+		pointer++;
+		while (get_flags(pointer, &flags))
+		{
+			pointer++;
+		}
+		pointer = get_width(pointer, &flags, list);
+		pointer = get_precision(pointer, &flags, list);
+		if (get_mods(pointer, &flags))
+			pointer++;
+
+		if (!func_parse(pointer))
+			count += print_range(start, pointer,
+			flags.l_mod || flags.h_mod ? pointer - 1 : 0);
+		else
+			count += print_func(pointer, list, &flags);
+	}
+	_putchar(-1);
+	va_end(list);
+	return (count);
 }
