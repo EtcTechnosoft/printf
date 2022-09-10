@@ -1,182 +1,63 @@
-/*
- * File: print_numbers.c
- */
-
 #include "main.h"
 
-unsigned int convert_di(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len);
-unsigned int convert_b(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len);
-unsigned int convert_u(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len);
-unsigned int convert_o(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len);
-
 /**
- * convert_di - Converts an argument to a signed int and
- *              stores it to a buffer contained in a struct.
- * @args: A va_list pointing to the argument to be converted.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A length modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
+ * print_integer - print an integer
+ * @list: list of arguments
+ * @func: flags for the print function
+ * Return: the length of printed in console
  */
-unsigned int convert_di(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len)
+int print_integer(va_list list, param_func *func)
 {
-	long int d, copy;
-	unsigned int ret = 0, count = 0;
-	char pad, space = ' ', neg = '-', plus = '+';
+	long i;
+	int num_of_digits;
 
-	if (len == LONG)
-		d = va_arg(args, long int);
+	/* check for mods */
+	if (func->l_mod)
+		i = va_arg(list, long);
+	else if (func->h_mod)
+		i = (short int) va_arg(list, int);
 	else
-		d = va_arg(args, int);
-	if (len == SHORT)
-		d = (short)d;
-
-	/* Handle space flag */
-	if (SPACE_FLAG == 1 && d >= 0)
-		ret += _memcpy(output, &space, 1);
-
-	if (prec <= 0 && NEG_FLAG == 0) /* Handle width  */
-	{
-		if (d == LONG_MIN)
-			count += 19;
-		else
-		{
-			for (copy = (d < 0) ? -d : d; copy > 0; copy /= 10)
-				count++;
-		}
-		count += (d == 0) ? 1 : 0;
-		count += (d < 0) ? 1 : 0;
-		count += (PLUS_FLAG == 1 && d >= 0) ? 1 : 0;
-		count += (SPACE_FLAG == 1 && d >= 0) ? 1 : 0;
-
-		/* Handle plus flag when zero flag is active */
-		if (ZERO_FLAG == 1 && PLUS_FLAG == 1 && d >= 0)
-			ret += _memcpy(output, &plus, 1);
-		/*Print negative sign when zero flag is active */
-		if (ZERO_FLAG == 1 && d < 0)
-			ret += _memcpy(output, &neg, 1);
-
-		pad = (ZERO_FLAG == 1) ? '0' : ' ';
-		for (wid -= count; wid > 0; wid--)
-			ret += _memcpy(output, &pad, 1);
-	}
-
-	/* Print negative sign when zero flag is not active */
-	if (ZERO_FLAG == 0 && d < 0)
-		ret += _memcpy(output, &neg, 1);
-	/* Handle plus flag when zero flag is not active */
-	if (ZERO_FLAG == 0 && (PLUS_FLAG == 1 && d >= 0))
-		ret += _memcpy(output, &plus, 1);
-
-	if (!(d == 0 && prec == 0))
-		ret += convert_sbase(output, d, "0123456789",
-				flags, 0, prec);
-
-	ret += print_neg_width(output, ret, flags, wid);
-
-	return (ret);
+		i = (int) va_arg(list, int);
+	/* print the number */
+	num_of_digits = print_num(convert_num(i, 10, 0, func), func);
+	return (num_of_digits);
 }
 
 /**
- * convert_b - Converts an unsigned int argument to binary
- *             and stores it to a buffer contained in a struct.
- * @args: A va_list pointing to the argument to be converted.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A length modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
- */
-unsigned int convert_b(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len)
+*print_unsigned_integer - print an unsigned integer
+*@list: list of arguments
+*@func: flags for the print function
+*Return: the length of printed in console
+*/
+int print_unsigned_integer(va_list list, param_func *func)
 {
-	unsigned int num;
+	unsigned long unsigned_num;
 
-	num = va_arg(args, unsigned int);
-
-	(void)len;
-
-	return (convert_ubase(output, num, "01", flags, wid, prec));
+	if (func->l_mod)
+		unsigned_num = (unsigned long)va_arg(list, unsigned long);
+	else if (func->h_mod)
+		unsigned_num = (unsigned short int)va_arg(list, unsigned int);
+	else
+		unsigned_num = (unsigned int)va_arg(list, unsigned int);
+	func->unsign = 1;
+	return (print_num(convert_num(unsigned_num, 10, FLAG_UNSIGNED, func), func));
 }
 
 /**
- * convert_o - Converts an unsigned int to octal and
- *             stores it to a buffer contained in a struct.
- * @args: A va_list poinitng to the argument to be converted.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A length modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
- */
-unsigned int convert_o(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len)
+ * print_address - prints an address of a variable in hexa format
+ * @list: list of arguments supllied
+ * @func: pointer to flag functions
+ * Return: the number/address of a variable
+*/
+int print_address(va_list list, param_func *func)
 {
-	unsigned long int num;
-	unsigned int ret = 0;
-	char zero = '0';
+	char *s;
+	unsigned long int address = va_arg(list, unsigned long int);
 
-	if (len == LONG)
-		num = va_arg(args, unsigned long int);
-	else
-		num = va_arg(args, unsigned int);
-	if (len == SHORT)
-		num = (unsigned short)num;
-
-	if (HASH_FLAG == 1 && num != 0)
-		ret += _memcpy(output, &zero, 1);
-
-	if (!(num == 0 && prec == 0))
-		ret += convert_ubase(output, num, "01234567",
-				flags, wid, prec);
-
-	ret += print_neg_width(output, ret, flags, wid);
-
-	return (ret);
-}
-
-/**
- * convert_u - Converts an unsigned int argument to decimal and
- *               stores it to a buffer contained in a struct.
- * @args: A va_list pointing to the argument to be converted.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A length modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
- */
-unsigned int convert_u(va_list args, buffer_t *output,
-		unsigned char flags, int wid, int prec, unsigned char len)
-{
-	unsigned long int num;
-	unsigned int ret = 0;
-
-	if (len == LONG)
-		num = va_arg(args, unsigned long int);
-	else
-		num = va_arg(args, unsigned int);
-	if (len == SHORT)
-		num = (unsigned short)num;
-
-	if (!(num == 0 && prec == 0))
-		ret += convert_ubase(output, num, "0123456789",
-				flags, wid, prec);
-
-	ret += print_neg_width(output, ret, flags, wid);
-
-	return (ret);
+	if (!address)
+		return (_puts("(nil)"));
+	s = convert_num(address, 16, FLAG_LOWERCASE | FLAG_UNSIGNED, func);
+	*--s = 'x';
+	*--s = '0';
+	return (print_num(s, func));
 }
